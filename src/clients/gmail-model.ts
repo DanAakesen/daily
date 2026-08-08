@@ -44,11 +44,12 @@ export async function classifyThread(config: ClassifierConfig, input: Classifica
   ].join("\n");
   const body = {
     model: config.model,
+    reasoning: { effort: "low" },
     input: [
       { role: "system", content: [{ type: "input_text", text: prompt }] },
       { role: "user", content: [{ type: "input_text", text: JSON.stringify(input) }] },
     ],
-    text: { format: { type: "json_schema", name: "gmail_attention", strict: true, schema: { type: "object", additionalProperties: false, required: ["semanticState", "semanticEvidence", "senderIsHuman", "excludedCategory", "sentRequestAt", "waitingSince"], properties: { semanticState: { type: "string", enum: ["new_question", "direct_request", "ambiguous", "awaiting_reply", "deferral", "resolved", "none"] }, semanticEvidence: { type: "string" }, senderIsHuman: { type: "boolean" }, excludedCategory: { type: ["string", "null"] }, sentRequestAt: optionalSourceTimestamp, waitingSince: optionalSourceTimestamp } } } },
+    text: { verbosity: "low", format: { type: "json_schema", name: "gmail_attention", strict: true, schema: { type: "object", additionalProperties: false, required: ["semanticState", "semanticEvidence", "senderIsHuman", "excludedCategory", "sentRequestAt", "waitingSince"], properties: { semanticState: { type: "string", enum: ["new_question", "direct_request", "ambiguous", "awaiting_reply", "deferral", "resolved", "none"] }, semanticEvidence: { type: "string" }, senderIsHuman: { type: "boolean" }, excludedCategory: { type: ["string", "null"] }, sentRequestAt: optionalSourceTimestamp, waitingSince: optionalSourceTimestamp } } } },
   };
   const response = await fetchJson(config.endpoint, { method: "POST", headers: { authorization: `Bearer ${config.apiKey}`, "content-type": "application/json", accept: "application/json" }, body: JSON.stringify(body) }, responseSchema, "gmail_classifier");
   let value: unknown;

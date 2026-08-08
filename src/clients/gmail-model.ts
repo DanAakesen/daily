@@ -25,6 +25,10 @@ function outputText(response: z.infer<typeof responseSchema>): string {
 
 export async function classifyThread(config: ClassifierConfig, input: ClassificationInput) {
   if (!config.endpoint || !config.apiKey || !config.model) throw new ExternalServiceError("gmail_classifier_not_configured", "Gmail semantic classifier is not configured");
+  const sourceTimestamps = [...new Set(input.messages.map((message) => message.sentAt))];
+  const optionalSourceTimestamp = sourceTimestamps.length
+    ? { anyOf: [{ type: "string", enum: sourceTimestamps }, { type: "null" }] }
+    : { type: "null" };
   const prompt = [
     "Classify one private email thread for a read-only personal attention dashboard.",
     "Exclude newsletters, marketing, receipts, automated alerts, calendar notifications, and non-human senders.",
@@ -35,7 +39,8 @@ export async function classifyThread(config: ClassifierConfig, input: Classifica
     "deferral: the other person promised a later answer; waitingSince is that promise.",
     "resolved: the thread contains an adequate response or the user closed it.",
     "none: no attention state applies.",
-    "Use only message timestamps supplied below. Evidence must be concise and factual.",
+    "For sentRequestAt and waitingSince, copy one supplied message timestamp exactly, including its timezone, or return null.",
+    "Evidence must be concise and factual.",
   ].join("\n");
   const body = {
     model: config.model,
@@ -43,7 +48,7 @@ export async function classifyThread(config: ClassifierConfig, input: Classifica
       { role: "system", content: [{ type: "input_text", text: prompt }] },
       { role: "user", content: [{ type: "input_text", text: JSON.stringify(input) }] },
     ],
-    text: { format: { type: "json_schema", name: "gmail_attention", strict: true, schema: { type: "object", additionalProperties: false, required: ["semanticState", "semanticEvidence", "senderIsHuman", "excludedCategory", "sentRequestAt", "waitingSince"], properties: { semanticState: { type: "string", enum: ["new_question", "direct_request", "ambiguous", "awaiting_reply", "deferral", "resolved", "none"] }, semanticEvidence: { type: "string" }, senderIsHuman: { type: "boolean" }, excludedCategory: { type: ["string", "null"] }, sentRequestAt: { type: ["string", "null"] }, waitingSince: { type: ["string", "null"] } } } } },
+    text: { format: { type: "json_schema", name: "gmail_attention", strict: true, schema: { type: "object", additionalProperties: false, required: ["semanticState", "semanticEvidence", "senderIsHuman", "excludedCategory", "sentRequestAt", "waitingSince"], properties: { semanticState: { type: "string", enum: ["new_question", "direct_request", "ambiguous", "awaiting_reply", "deferral", "resolved", "none"] }, semanticEvidence: { type: "string" }, senderIsHuman: { type: "boolean" }, excludedCategory: { type: ["string", "null"] }, sentRequestAt: optionalSourceTimestamp, waitingSince: optionalSourceTimestamp } } } },
   };
   const response = await fetchJson(config.endpoint, { method: "POST", headers: { authorization: `Bearer ${config.apiKey}`, "content-type": "application/json", accept: "application/json" }, body: JSON.stringify(body) }, responseSchema, "gmail_classifier");
   let value: unknown;

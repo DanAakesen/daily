@@ -15,9 +15,10 @@ const payload = await buildRefreshPayload(productionDependencies(config), now, r
 const response = await submitRefresh(config, payload);
 const counts = Object.fromEntries(Object.entries(payload.sources).map(([source, snapshot]) => [source, snapshot.status === "ok" ? snapshot.items.length : 0]));
 const statuses = Object.fromEntries(Object.entries(payload.sources).map(([source, snapshot]) => [source, snapshot.status]));
-process.stdout.write(`${JSON.stringify({ event: "refresh_complete", runId: payload.runId, accepted: response.accepted, duplicate: response.duplicate ?? false, statuses, counts })}\n`);
+const errors = Object.fromEntries(Object.entries(payload.sources).flatMap(([source, snapshot]) => snapshot.status === "error" ? [[source, { code: snapshot.errorCode, message: snapshot.errorMessage }]] : []));
+process.stdout.write(`${JSON.stringify({ event: "refresh_complete", runId: payload.runId, accepted: response.accepted, duplicate: response.duplicate ?? false, statuses, counts, errors })}\n`);
 
 if (process.env.GITHUB_STEP_SUMMARY) {
-  const rows = Object.entries(payload.sources).map(([source, snapshot]) => `| ${source} | ${snapshot.status} | ${snapshot.status === "ok" ? snapshot.items.length : 0} |`).join("\n");
-  await appendFile(process.env.GITHUB_STEP_SUMMARY, `## Daily refresh\n\nRun: \`${payload.runId}\`\n\n| Source | Status | Items |\n|---|---:|---:|\n${rows}\n`, "utf8");
+  const rows = Object.entries(payload.sources).map(([source, snapshot]) => `| ${source} | ${snapshot.status} | ${snapshot.status === "ok" ? snapshot.items.length : 0} | ${snapshot.status === "error" ? snapshot.errorCode : ""} |`).join("\n");
+  await appendFile(process.env.GITHUB_STEP_SUMMARY, `## Daily refresh\n\nRun: \`${payload.runId}\`\n\n| Source | Status | Items | Error |\n|---|---:|---:|---|\n${rows}\n`, "utf8");
 }

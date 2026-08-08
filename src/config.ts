@@ -1,6 +1,9 @@
 import { z } from "zod";
 
-const optionalSecret = z.string().min(1).optional();
+const emptyStringToUndefined = (value: unknown) => value === "" ? undefined : value;
+const optionalSecret = z.preprocess(emptyStringToUndefined, z.string().min(1).optional());
+const optionalEmail = z.preprocess(emptyStringToUndefined, z.string().email().optional());
+const optionalUrl = z.preprocess(emptyStringToUndefined, z.string().url().optional());
 
 const ConfigSchema = z.object({
   DAILY_OVERVIEW_URL: z.string().url().default("https://dan-daily-overview.danaakesen.chatgpt.site"),
@@ -9,8 +12,8 @@ const ConfigSchema = z.object({
   GOOGLE_CLIENT_ID: optionalSecret,
   GOOGLE_CLIENT_SECRET: optionalSecret,
   GOOGLE_REFRESH_TOKEN: optionalSecret,
-  GOOGLE_ACCOUNT_EMAIL: z.string().email().optional(),
-  GMAIL_CLASSIFIER_ENDPOINT: z.string().url().optional(),
+  GOOGLE_ACCOUNT_EMAIL: optionalEmail,
+  GMAIL_CLASSIFIER_ENDPOINT: optionalUrl,
   GMAIL_CLASSIFIER_API_KEY: optionalSecret,
   GMAIL_CLASSIFIER_MODEL: optionalSecret,
 });

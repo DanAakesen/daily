@@ -8,9 +8,9 @@ All production credentials are encrypted GitHub Actions environment secrets in `
 |---|---|---|---|
 | Dashboard ingestion | Configured | Write only to the normalized ingestion endpoint | Rotate on suspected exposure |
 | TickTick | Configured and live-tested | `tasks:read` | Expires 2027-02-04 16:12 UTC |
-| Google Calendar | APIs enabled; OAuth pending | `calendar.readonly` planned | Google refresh token policy |
-| Gmail | APIs enabled; OAuth pending | `gmail.readonly` planned | Google refresh token policy |
-| OpenAI classifier | API key pending | Responses API only | Rotate on suspected exposure |
+| Google Calendar | Configured and live-tested | `calendar.readonly` | Valid until revoked or invalidated by Google |
+| Gmail | Configured and live-tested | `gmail.readonly` | Valid until revoked or invalidated by Google |
+| OpenAI classifier | Configured and live-tested | Responses model requests only | Rotate on suspected exposure |
 
 ## Rules
 
@@ -18,4 +18,4 @@ All production credentials are encrypted GitHub Actions environment secrets in `
 - Never print, commit, upload as artifacts, or place credentials in GitHub variables.
 - Keep the local refresh enabled until manual parity and two scheduled cloud successes pass.
 - TickTick does not document a refresh-token flow. Reauthorize before the recorded expiry.
-- Google OAuth must use offline access and a refresh token. If the consent app remains in testing, verify whether Google applies a short refresh-token lifetime before accepting cloud cutover.
+- Google OAuth uses offline access and a refresh token. The consent app is in production for private self-use; Google still shows an unverified-app warning during reauthorization.

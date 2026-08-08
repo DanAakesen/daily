@@ -48,6 +48,8 @@ Move the Daily Overview Gmail, Google Calendar, and TickTick refresh from Dan's 
 6. Two successful scheduled cloud refreshes.
 7. Disable the duplicate local automation.
 
+Gates 1-5 are complete. Gates 6-7 remain pending.
+
 ## Validation checks
 
 - [x] Bicep compilation succeeds.
@@ -74,7 +76,7 @@ Move the Daily Overview Gmail, Google Calendar, and TickTick refresh from Dan's 
 - `az deployment sub validate`: `Succeeded`.
 - `az deployment sub what-if`: only `rg-daily` creation in `denmarkeast`.
 - Subscription policy assignments: none returned.
-- `npm test`: 7/7 passed.
+- `npm test`: 9/9 passed.
 - `npm run typecheck`: passed.
 - `npm run build`: passed.
 - `npm audit --audit-level=high`: zero vulnerabilities.
@@ -87,12 +89,13 @@ Move the Daily Overview Gmail, Google Calendar, and TickTick refresh from Dan's 
 - Deployed resources inside `rg-daily`: zero; GitHub Actions is the runtime.
 - Live role verification: not applicable; no managed identities or role assignments were deployed.
 - Previous empty group `rg-personal-assistant`: deleted after a zero-resource check; verified absent.
+- Manual GitHub Actions refresh `31273701894`: accepted by production with Gmail 47, TickTick 28, and Google Calendar 27 records; all source statuses `ok`.
 
 ## Known risks
 
 - TickTick countdowns are not present in the documented Open API.
-- TickTick Inbox coverage and token longevity require live verification.
-- Google and TickTick OAuth consent may require Dan's interaction.
+- TickTick token expiry is monitored; reauthorization is required before 2027-02-04 16:12 UTC.
+- Google and TickTick reauthorization require Dan's signed-in personal browser session.
 - GitHub scheduled workflows may start later than their nominal minute; ingestion remains idempotent.
 
 ## Rollback

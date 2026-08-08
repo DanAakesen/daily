@@ -26,8 +26,9 @@ See `.azure/deployment-plan.md` for rollout gates and `docs/ingestion-contract.m
 
 - GitHub `production` environment and scheduled workflow are configured.
 - TickTick read-only OAuth is connected and live cloud ingestion has passed with 28 records.
-- Google Cloud project `dan-daily-2026` exists; Gmail and Calendar APIs are enabled. OAuth consent and client creation remain pending.
-- The OpenAI classifier endpoint and model are configured; its API key remains pending.
-- The current local refresh stays enabled until all three sources pass manually and two scheduled cloud runs succeed.
+- Google read-only OAuth is connected for Gmail and Calendar through project `dan-daily-2026`.
+- The OpenAI Responses classifier uses a dedicated restricted project key.
+- Manual production acceptance passed on 2026-08-08 with Gmail 47, TickTick 28, and Google Calendar 27 records.
+- The current local refresh stays enabled until two scheduled cloud runs succeed.
 
 See `docs/credentials.md` for the credential boundary and rotation dates.

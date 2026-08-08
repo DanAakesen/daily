@@ -20,7 +20,7 @@ npm run typecheck
 npm run build
 ```
 
-See `.azure/deployment-plan.md` for rollout gates and `docs/ingestion-contract.md` for the payload contract.
+See `.azure/deployment-plan.md` for rollout gates, `docs/ingestion-contract.md` for the payload contract, and `docs/action-acceptance.md` for the reversible action tests planned for 2026-08-09.
 
 ## Current rollout state
 

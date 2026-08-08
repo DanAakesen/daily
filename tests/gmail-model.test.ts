@@ -37,6 +37,8 @@ test("constrains classifier timestamps to exact source message timestamps", asyn
     assert.equal(classification.waitingSince, sourceTimestamp);
     const text = requestBody?.text as { format?: { schema?: { properties?: { waitingSince?: { anyOf?: Array<{ enum?: string[] }> } } } } } | undefined;
     assert.deepEqual(text?.format?.schema?.properties?.waitingSince?.anyOf?.[0]?.enum, [sourceTimestamp]);
+    const excludedCategory = requestBody?.text as { format?: { schema?: { properties?: { excludedCategory?: { anyOf?: Array<{ enum?: string[] }> } } } } } | undefined;
+    assert.deepEqual(excludedCategory?.format?.schema?.properties?.excludedCategory?.anyOf?.[0]?.enum, ["newsletter", "marketing", "receipt", "automated", "calendar_notification", "non_human"]);
     assert.deepEqual(requestBody?.reasoning, { effort: "low" });
     assert.equal((requestBody?.text as { verbosity?: string } | undefined)?.verbosity, "low");
   } finally {

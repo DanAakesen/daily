@@ -1,0 +1,271 @@
+version: 1
+output_language: English
+mode: propose
+# Modes:
+# - paused: do nothing.
+# - observe: inspect and report only.
+# - propose: refine planning and request approvals; do not implement.
+# - execute-ready: implement owner-approved Ready work and pre-authorized maintenance recovery.
+
+project_manager:
+  provider: codex
+  session: persistent-root
+  owns_native_agent_tree: true
+
+architect:
+  provider: codex
+  session: reusable-native-subagent
+  parent: project-manager
+  custom_agent: architect
+  mode: conditional
+  max_concurrent: 2
+  triggers:
+    - architecture
+    - api-contract
+    - authentication
+    - data-model
+    - deployment
+    - cross-cutting-change
+
+engineer:
+  default: auto
+  session: disposable-native-subagent
+  parent: project-manager
+  custom_agent: engineer
+  max_concurrent: 3
+  labels:
+    codex: engineer:codex
+    copilot_cli: engineer:copilot
+    either: engineer:either
+  copilot_cli:
+    max_autopilot_continues: 10
+
+release_manager:
+  provider: codex
+  model: gpt-5.6-luna
+  reasoning_effort: medium
+  session: disposable-native-subagent
+  max_concurrent: unlimited
+  parent: project-manager
+  custom_agent: release_manager
+  scope:
+    - pr-review
+    - merge-readiness
+    - pr-readying
+    - merge-when-green
+    - deploy-when-ready
+    - post-deploy-validation
+  must_not:
+    - implement-feature-code
+    - fix-review-findings
+    - change-architecture
+    - merge-with-pending-or-failing-checks
+    - merge-unreviewed-sha
+    - bypass-branch-protection
+
+native_orchestration:
+  completion_transport: parent-subagent-result
+  independent_codex_role_tasks_forbidden: true
+  project_manager_waits_for_required_results: false
+  results_reconciled_on_next_control_tick: true
+  project_manager_routes_followups: true
+  codex_engineer_wraps_copilot_cli: true
+
+subagent_naming:
+  display_format: "{role} {phase} {issue_number_optional} — {title}"
+  phases:
+    - Plan
+    - Implement
+  roles:
+    - Engineer
+    - Architect
+    - Release Manager
+  issue_number_format: "#{number}"
+  multiple_issue_separator: " + "
+  multiple_issue_title_separator: " / "
+  issue_title_source: github-issue-title
+  no_issue_title_source: generated-concise-title
+  native_task_name_format: "{role_slug}_{phase_slug}_{issue_number_optional}_{title_slug}"
+  retitle_on_every_assignment: true
+  default_phase_by_role:
+    architect: Plan
+    engineer: Implement
+    release_manager: Implement
+
+github:
+  source_of_truth: project-and-issues
+  backlog_status: Backlog
+  ready_status: Ready
+  in_progress_status: In progress
+  review_status: In review
+
+backlog_intake:
+  issue_creator_must_add_to_project: true
+  default_status: Backlog
+  hourly_scan_for_missing_issues: false
+  planning_label: needs-planning
+  preserve_deferred_phase_and_revisit_context: true
+
+readiness_gate:
+  human_approval_required: true
+  approval_owner: project-owner
+  ready_status_is_approval: true
+  remove_labels_when_moved_to_ready:
+    - needs-planning
+  incompatible_with_ready:
+    - needs-planning
+  unresolved_blockers_stay_out_of_ready: true
+  criteria:
+    - outcome-and-scope-clear
+    - acceptance-criteria-complete
+    - dependencies-and-blockers-known
+    - roadmap-phase-recorded
+    - architecture-and-risk-constraints-decided
+    - validation-plan-defined
+    - engineer-routing-decided
+
+heartbeat:
+  cadence: hourly
+  role: short-control-plane-tick
+  max_duration_minutes: 5
+  exit_if_pm_orchestration_is_active: true
+  never_wait_for_long_running_children: true
+  backlog_query: "status:Backlog is:issue is:open"
+  process_all_query_results: true
+  max_blocking_questions_per_run: 1
+  notify_only_for_material_change_or_decision: true
+
+reporting_contract:
+  always_actionable_project_brief: true
+  completion_event_is_not_the_whole_report: true
+  required_sections:
+    - project-status
+    - changed-since-last-loop
+    - active-work
+    - next-three-pm-priorities
+    - owner-action
+  project_status_values:
+    - Green
+    - Amber
+    - Red
+  active_work_fields:
+    - issue-number-and-exact-title
+    - stage
+    - verified-running-role-or-agent
+    - blocker-or-next-step
+  issue_reference_format: "#{number} — {exact_github_title}"
+  issue_number_without_title_forbidden: true
+  owner_display_name: configured-owner
+  active_requires_live_worker_evidence: true
+  active_worker_evidence:
+    - running-native-child
+    - running-registered-external-process
+  project_status_is_not_active_evidence: true
+  in_progress_requires_live_worker_or_documented_blocker: true
+  in_review_meaning: owner-acceptance-after-completed-implementation-and-release
+  in_review_requires_live_worker: false
+  in_review_report_under: owner-action
+  automated_release_completes_before_in_review: true
+  changes_requested_transition: In progress
+  reconcile_orphaned_in_progress_before_reporting: true
+  restart_eligible_orphaned_work_when_capacity_exists: true
+  correct_stale_project_state_when_work_cannot_resume: true
+  report_post_reconciliation_state_only: true
+  owner_action_values:
+    - specific-decision-or-answer-needed
+    - No-action-needed
+  always_include_next_pm_action: true
+  max_next_priorities: 3
+  use_last_known_project_state_when_api_unavailable: true
+  mark_partial_data_and_retry: true
+  concise_mobile_format: true
+
+maintenance_recovery:
+  enabled_in_modes:
+    - execute-ready
+  inspect:
+    - active-and-recent-engineer-results
+    - validation-and-ci-failures
+    - deployment-and-post-deploy-failures
+  signals:
+    - recurring-bug
+    - repeated-workaround
+    - flaky-test-or-tooling
+    - environment-or-harness-failure
+  require_evidence: true
+  deduplicate_against_active-work: true
+  one_engineer_per_distinct-root-cause: true
+  start_immediately_only_when:
+    - blocks-current-work
+    - priority-p0-or-p1
+  otherwise_add_to_backlog: true
+  create_or_update_issue: true
+  project_status_on_start: In progress
+  ready_approval_required: false
+  allowed_outcome: reviewed-green-merge
+
+release_policy:
+  pr_creation_requires_human_confirmation: false
+  mark_pr_ready_requires_human_confirmation: false
+  merge_when_green_requires_human_confirmation: false
+  required_before_merge:
+    - exact-head-sha-reviewed
+    - acceptance-criteria-satisfied
+    - required-validation-complete
+    - required-checks-green
+    - no-unresolved-review-findings
+    - no-merge-conflicts
+  respect_branch_protection: true
+  deploy_requires_human_confirmation: false
+  merge_that_triggers_deploy_requires_human_confirmation: false
+  destructive_or_data_migration_requires_human_confirmation: false
+
+validation_policy:
+  engineer: targeted-tests-and-affected-workspace-checks
+  ci: full-suite-and-build-once
+  release_manager: trust-green-required-ci
+  browser_qa: changed-ui-flows-only
+  full_local_validation_only_for:
+    - authentication
+    - persisted-data
+    - deployment
+    - cross-cutting-change
+    - ci-failure-investigation
+
+repository_hygiene:
+  quick_scan_on_heartbeat: true
+  checks:
+    - primary-checkout-status
+    - active-worktree-status
+    - ignored-logs-and-temp-files
+    - unexpected-untracked-generated-files
+    - tracked-generated-artifacts
+    - missing-ignore-rules
+  stale_ignored_artifact_age_hours: 24
+  auto_remove_only_when:
+    - ignored-generated-file
+    - no-active-writer
+    - no-current-diagnostic-value
+  route_systemic_causes_to_maintenance_recovery: true
+  never_auto_remove:
+    - tracked-files
+    - active-process-output
+    - current-diagnostic-evidence
+    - dirty-or-unmerged-worktrees
+    - unclassified-untracked-files
+
+permissions:
+  allowed:
+    - inspect
+    - propose
+    - create-branch
+    - edit-in-isolated-worktree
+    - validate
+    - open-draft-pr
+    - mark-pr-ready
+    - merge-reviewed-green-pr
+    - update-issue-status
+  requires_human_confirmation:
+    - move-to-ready
+    - change-secrets
+    - create-paid-resources

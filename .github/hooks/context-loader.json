@@ -1,0 +1,12 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "type": "command",
+        "command": "if (Test-Path PRODUCT.md) { Get-Content PRODUCT.md -Raw }; if (Test-Path DESIGN.md) { Get-Content DESIGN.md -Raw }; if (Test-Path docs\\README.md) { Get-Content docs\\README.md -Raw }; if (Test-Path docs\\index.md) { Get-Content docs\\index.md -Raw }; if (Test-Path .github\\agent-state) { Get-ChildItem .github\\agent-state\\*.md | Sort-Object Name | ForEach-Object { Get-Content $_.FullName -Raw } }",
+        "windows": "if (Test-Path PRODUCT.md) { Get-Content PRODUCT.md -Raw }; if (Test-Path DESIGN.md) { Get-Content DESIGN.md -Raw }; if (Test-Path docs\\README.md) { Get-Content docs\\README.md -Raw }; if (Test-Path docs\\index.md) { Get-Content docs\\index.md -Raw }; if (Test-Path .github\\agent-state) { Get-ChildItem .github\\agent-state\\*.md | Sort-Object Name | ForEach-Object { Get-Content $_.FullName -Raw } }",
+        "timeout": 5
+      }
+    ]
+  }
+}

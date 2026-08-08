@@ -1,0 +1,57 @@
+version: 1
+enabled: false
+purpose: optional-health-monitoring-only
+
+automation:
+  name_pattern: "{project_name} Watchdog"
+  kind: heartbeat
+  cadence_minutes: 15
+  target: persistent-project-manager
+  forward_anomalies_to: persistent-project-manager
+
+registry:
+  local_path: .git/codex-agent-runtime/watchdog.json
+  register_native_codex_subagents: false
+  register_external_copilot_cli_processes: true
+  required_fields:
+    - issue
+    - provider
+    - thread-or-process-id
+    - branch-or-worktree
+    - started-at
+    - last-progress-at
+    - status
+    - question-or-blocker
+    - pull-request
+
+monitor:
+  sources:
+    - native-pm-agent-tree
+    - registered-copilot-cli
+    - github-issues
+    - github-pull-requests
+    - ci
+  thresholds_minutes:
+    unanswered_question: 5
+    no_progress: 30
+  alert_on:
+    - unanswered-question
+    - failed-native-child
+    - no-progress
+    - in-progress-without-active-native-engineer-or-registered-cli
+    - ready-with-planning-or-blocking-signal
+    - failed-ci
+    - unresolved-blocking-review
+
+reporting:
+  triage_owner: persistent-project-manager
+  escalation_destination: persistent-project-manager
+  anomalies_only: true
+  suppress_unchanged_duplicates: true
+  include_in_hourly_pm_summary: true
+  never_use_for_role_handoff_delivery: true
+
+safety:
+  watchdog_is_read_only: true
+  verify_original_state_before_replacement_agent: true
+  never_merge_or_deploy: true

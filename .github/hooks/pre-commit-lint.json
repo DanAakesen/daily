@@ -1,0 +1,13 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "type": "command",
+        "command": "npm run lint --silent 2>$null; if ($LASTEXITCODE -ne 0) { Write-Output 'WARN: lint not configured' }",
+        "windows": "npm run lint --silent 2>$null; if ($LASTEXITCODE -ne 0) { Write-Output 'WARN: lint not configured' }",
+        "timeout": 30,
+        "matchers": ["git_commit"]
+      }
+    ]
+  }
+}

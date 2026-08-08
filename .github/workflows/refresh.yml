@@ -1,0 +1,39 @@
+name: Refresh Daily Overview
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 4,5,13,14 * * *"
+
+concurrency:
+  group: daily-overview-refresh
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Refresh sources and ingest snapshot
+        run: npm run refresh -- ${{ github.event_name == 'schedule' && '--scheduled' || '' }}
+        env:
+          DAILY_OVERVIEW_URL: ${{ vars.DAILY_OVERVIEW_URL }}
+          ATTENTION_INGEST_BEARER_TOKEN: ${{ secrets.ATTENTION_INGEST_BEARER_TOKEN }}
+          TICKTICK_ACCESS_TOKEN: ${{ secrets.TICKTICK_ACCESS_TOKEN }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GOOGLE_REFRESH_TOKEN: ${{ secrets.GOOGLE_REFRESH_TOKEN }}
+          GOOGLE_ACCOUNT_EMAIL: ${{ secrets.GOOGLE_ACCOUNT_EMAIL }}
+          GMAIL_CLASSIFIER_ENDPOINT: ${{ vars.GMAIL_CLASSIFIER_ENDPOINT }}
+          GMAIL_CLASSIFIER_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GMAIL_CLASSIFIER_MODEL: ${{ vars.GMAIL_CLASSIFIER_MODEL }}

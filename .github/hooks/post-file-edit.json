@@ -1,0 +1,13 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "type": "command",
+        "command": "if ($env:FILEPATH) { npx prettier --write \"$env:FILEPATH\" 2>$null }; exit 0",
+        "windows": "if ($env:FILEPATH) { npx prettier --write \"$env:FILEPATH\" 2>$null }; exit 0",
+        "timeout": 10,
+        "matchers": ["edit_file", "create_file"]
+      }
+    ]
+  }
+}

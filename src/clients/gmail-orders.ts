@@ -28,8 +28,11 @@ function outputText(response: z.infer<typeof responseSchema>): string {
 export function isOrderCandidate(input: ClassificationInput, now: Date): boolean {
   const latest = input.messages.at(-1);
   if (!latest || now.getTime() - Date.parse(latest.sentAt) > 60 * 86_400_000) return false;
-  const text = `${input.subject}\n${input.messages.map((message) => message.body).join("\n")}`;
-  return /\b(order|ordre|ordrenr|order number|ordernummer|forsendelse|shipment|shipped|afsendt|levering|delivery|pakke|pakket|tracking|spor(?:ing|ingsnummer)?)\b/i.test(text);
+  if (/\b(order|ordre|ordrenr|forsendelse|shipment|shipped|afsendt|levering|delivery|pakke|tracking|spor(?:ing|ingsnummer)?)\b/i.test(input.subject)) return true;
+  const body = input.messages.map((message) => message.body).join("\n");
+  const hasOrderReference = /\b(ordrenr|ordernummer|order number|order no\.?|ordre\s*#)\b/i.test(body);
+  const hasLifecycleState = /\b(modtaget|received|processing|behandler|pakket|shipped|afsendt|på vej|levering|delivery|klar til afhentning|ready for pickup|forsinket|delayed)\b/i.test(body);
+  return hasOrderReference && hasLifecycleState;
 }
 
 export async function classifyOrder(config: ClassifierConfig, input: ClassificationInput): Promise<OrderClassification> {

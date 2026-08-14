@@ -5,6 +5,7 @@ import { activeOrderUpdates, classifyOrder, isOrderCandidate } from "../src/clie
 test("recognizes recent fulfillment messages without treating old mail as active", () => {
   const now = new Date("2026-08-14T16:00:00.000Z");
   assert.equal(isOrderCandidate({ threadId: "one", subject: "Din ordre er på vej", messages: [{ messageId: "one", direction: "incoming", sentAt: "2026-08-14T12:00:00.000Z", sender: "shop@example.com", body: "Ordrenummer DK1392219 er afsendt" }] }, now), true);
+  assert.equal(isOrderCandidate({ threadId: "footer", subject: "Your weekly account summary", messages: [{ messageId: "footer", direction: "incoming", sentAt: "2026-08-14T12:00:00.000Z", sender: "service@example.com", body: "See order history in your account." }] }, now), false);
   assert.equal(isOrderCandidate({ threadId: "two", subject: "Din ordre er på vej", messages: [{ messageId: "two", direction: "incoming", sentAt: "2026-05-01T12:00:00.000Z", sender: "shop@example.com", body: "Ordrenummer old" }] }, now), false);
 });
 

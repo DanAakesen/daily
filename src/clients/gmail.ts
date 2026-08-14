@@ -1,7 +1,8 @@
 import { z } from "zod";
-import type { GmailThread } from "../domain/attention.js";
+import type { GmailItem, GmailThread } from "../domain/attention.js";
 import { ExternalServiceError, fetchJson } from "../lib/http.js";
 import { classifyThread, type ClassifierConfig } from "./gmail-model.js";
+import { activeOrderUpdates, classifyOrder, isOrderCandidate, type OrderClassification } from "./gmail-orders.js";
 
 type GmailPart = { mimeType?: string; headers?: Array<{ name: string; value: string }>; body?: { data?: string }; parts?: GmailPart[] };
 const threadListSchema = z.object({ threads: z.array(z.object({ id: z.string() })).default([]), nextPageToken: z.string().optional() }).passthrough();
@@ -68,12 +69,13 @@ async function threadIds(token: string): Promise<string[]> {
   return [...new Set(ids)];
 }
 
-export async function fetchGmail(token: string, accountEmail: string | undefined, classifier: ClassifierConfig, now: Date): Promise<GmailThread[]> {
+export async function fetchGmail(token: string, accountEmail: string | undefined, classifier: ClassifierConfig, now: Date): Promise<GmailItem[]> {
   if (!accountEmail) throw new ExternalServiceError("gmail_account_not_configured", "Google account email is not configured");
   const self = accountEmail.toLowerCase();
   const ids = await threadIds(token);
   const threads = await Promise.all(ids.map((id) => fetchJson(`https://gmail.googleapis.com/gmail/v1/users/me/threads/${encodeURIComponent(id)}?format=full`, { method: "GET", headers: auth(token) }, threadSchema, "gmail")));
   const results: GmailThread[] = [];
+  const orderClassifications: OrderClassification[] = [];
   for (const thread of threads) {
     const messages = [...thread.messages].sort((a, b) => Number(a.internalDate) - Number(b.internalDate));
     const parsed = messages.map((message) => {
@@ -83,13 +85,15 @@ export async function fetchGmail(token: string, accountEmail: string | undefined
     });
     const latest = parsed.at(-1);
     if (!latest) continue;
+    const classificationInput = { threadId: thread.id, subject: header(latest.root, "subject") || "Untitled email", messages: parsed.map((item) => ({ messageId: item.message.id, direction: item.direction, sentAt: item.sentAt, sender: item.from.email, body: item.body })) };
+    if (isOrderCandidate(classificationInput, now)) orderClassifications.push(await classifyOrder(classifier, classificationInput));
     const ageHours = (now.getTime() - Date.parse(latest.sentAt)) / 3_600_000;
     if (ageHours < 24) continue;
     const excludedCategory = automated(latest.root, latest.from.email, latest.message.labelIds);
     if (excludedCategory) continue;
-    const classification = await classifyThread(classifier, { threadId: thread.id, subject: header(latest.root, "subject") || "Untitled email", messages: parsed.map((item) => ({ messageId: item.message.id, direction: item.direction, sentAt: item.sentAt, sender: item.from.email, body: item.body })) });
+    const classification = await classifyThread(classifier, classificationInput);
     if (classification.excludedCategory || !classification.senderIsHuman || ["resolved", "none"].includes(classification.semanticState)) continue;
     results.push({ type: "thread", id: thread.id, threadId: thread.id, title: header(latest.root, "subject") || "Untitled email", latestMessageId: latest.message.id, latestMessageAt: latest.sentAt, latestIncomingAt: [...parsed].reverse().find((item) => item.direction === "incoming")?.sentAt ?? null, latestDirection: latest.direction, senderName: latest.from.name, senderEmail: latest.from.email || null, senderIsHuman: classification.senderIsHuman, excludedCategory: classification.excludedCategory, semanticState: classification.semanticState, semanticEvidence: classification.semanticEvidence, sentRequestAt: classification.sentRequestAt, waitingSince: classification.waitingSince, snippet: latest.body.slice(0, 2000) || null, labels: latest.message.labelIds.slice(0, 30) });
   }
-  return results;
+  return [...results, ...activeOrderUpdates(orderClassifications)];
 }

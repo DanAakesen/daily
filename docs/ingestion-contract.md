@@ -14,3 +14,5 @@ Every payload contains the three sources `gmail`, `ticktick`, and `google_calend
 A failed source never reuses partial items. The site retains its previous successful snapshot and marks it stale. Retries reuse the identical body and idempotency key.
 
 The authoritative validation remains in the deployed Daily Overview worker. This repository mirrors that schema and tests compatibility before submission.
+
+Gmail submits two separate read-only item streams: human attention threads and active physical-order updates. Order updates are deduplicated by merchant and normalized order number. Only received, processing, shipped, ready-for-pickup, and delayed states are submitted; delivered, cancelled, and refunded orders disappear from the next complete snapshot.

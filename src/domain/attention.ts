@@ -28,6 +28,18 @@ export const GmailThreadSchema = baseItem.extend({
   labels: z.array(z.string().min(1).max(100)).max(30),
 });
 
+export const GmailOrderUpdateSchema = baseItem.extend({
+  type: z.literal("order_update"),
+  company: z.string().min(1).max(300),
+  orderNumber: z.string().min(1).max(200),
+  status: z.enum(["received", "processing", "shipped", "ready_for_pickup", "delayed"]),
+  statusLabel: z.string().min(1).max(120),
+  deliveryDetail: z.string().max(300).nullable(),
+  updatedAt: iso,
+});
+
+export const GmailItemSchema = z.discriminatedUnion("type", [GmailThreadSchema, GmailOrderUpdateSchema]);
+
 export const TickTickItemSchema = z.discriminatedUnion("type", [
   baseItem.extend({ type: z.literal("task"), projectId: z.string().max(500).nullable(), priority: z.number().int().min(0).max(5), dueAt: nullableIso, startAt: nullableIso, allDay: z.boolean(), status: z.string().max(60), content: z.string().max(4000).nullable() }),
   baseItem.extend({ type: z.literal("habit"), active: z.boolean(), target: z.number().int().min(1).max(1000), repeatRule: z.string().max(1000).nullable(), startDate: z.string().max(20).nullable() }),
@@ -57,13 +69,15 @@ export const AttentionPayloadSchema = z.object({
   mode: z.literal("refresh"),
   capturedAt: iso,
   sources: z.object({
-    gmail: z.union([sourceOk(GmailThreadSchema), sourceError]),
+    gmail: z.union([sourceOk(GmailItemSchema), sourceError]),
     ticktick: z.union([sourceOk(TickTickItemSchema), sourceError]),
     google_calendar: z.union([sourceOk(CalendarEventSchema), sourceError]),
   }),
 });
 
 export type GmailThread = z.infer<typeof GmailThreadSchema>;
+export type GmailOrderUpdate = z.infer<typeof GmailOrderUpdateSchema>;
+export type GmailItem = z.infer<typeof GmailItemSchema>;
 export type TickTickItem = z.infer<typeof TickTickItemSchema>;
 export type CalendarEvent = z.infer<typeof CalendarEventSchema>;
 export type AttentionPayload = z.infer<typeof AttentionPayloadSchema>;

@@ -5,7 +5,7 @@ import { fetchGmail } from "./clients/gmail.js";
 import { googleAccessToken } from "./clients/google-auth.js";
 import { fetchGoogleCalendar } from "./clients/google-calendar.js";
 import { fetchTickTick } from "./clients/ticktick.js";
-import { AttentionPayloadSchema, type AttentionPayload, type CalendarEvent, type GmailThread, type TickTickItem } from "./domain/attention.js";
+import { AttentionPayloadSchema, type AttentionPayload, type CalendarEvent, type GmailItem, type TickTickItem } from "./domain/attention.js";
 import { fetchJson, safeError } from "./lib/http.js";
 
 type SourceOk<T> = { status: "ok"; capturedAt: string; items: T[] };
@@ -15,7 +15,7 @@ export type SourceResult<T> = SourceOk<T> | SourceError;
 const ingestResponseSchema = z.object({ accepted: z.boolean(), duplicate: z.boolean().optional(), runId: z.string().optional() }).passthrough();
 
 export type RefreshDependencies = {
-  gmail: (now: Date) => Promise<GmailThread[]>;
+  gmail: (now: Date) => Promise<GmailItem[]>;
   ticktick: (now: Date) => Promise<TickTickItem[]>;
   calendar: (now: Date) => Promise<CalendarEvent[]>;
 };

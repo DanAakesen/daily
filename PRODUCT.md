@@ -14,6 +14,7 @@ Dan is the sole user and operator.
 - Read active habits, 30 days of habit check-ins, and the two configured workout targets.
 - Read every visible Google calendar through 31 days.
 - Read and semantically classify Gmail attention threads using the existing 24-hour and three-Danish-business-day rules.
+- Read Gmail purchase-order lifecycle messages separately, group active orders by merchant and order number, and never alter the mailbox.
 - Run cloud refreshes at 06:00 and 15:00 Europe/Copenhagen.
 - Preserve source-level failure isolation and the existing strict ingestion contract.
 
